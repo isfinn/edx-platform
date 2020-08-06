@@ -132,12 +132,7 @@ class ExperimentWaffleFlag(CourseWaffleFlag):
         # Keep some imports in here, because this class is commonly used at a module level, and we want to avoid
         # circular imports for any models.
         from experiments.models import ExperimentKeyValue
-        from lms.djangoapps.courseware.access import has_access
-        from lms.djangoapps.courseware.masquerade import (
-            setup_masquerade,
-            is_masquerading,
-            get_specific_masquerading_user,
-        )
+        from lms.djangoapps.courseware.masquerade import get_specific_masquerading_user
 
         request = get_current_request()
         if not request:
@@ -187,7 +182,11 @@ class ExperimentWaffleFlag(CourseWaffleFlag):
                 break
 
         session_key = 'tracked.{}'.format(experiment_name)
-        if track and hasattr(request, 'session') and session_key not in request.session and not masquerading_as_specific_student:
+        if (
+                track and hasattr(request, 'session') and
+                session_key not in request.session and
+                not masquerading_as_specific_student
+        ):
             segment.track(
                 user_id=user.id,
                 event_name='edx.bi.experiment.user.bucketed',
@@ -211,11 +210,11 @@ class ExperimentWaffleFlag(CourseWaffleFlag):
         return self.get_bucket(course_key) != 0
 
     def is_experiment_on(self, course_key=None):
-        # If no course_key is supplied check the global flag irrespective of courses
-        if course_key is None:
-            return super().is_enabled_without_course_context()
-
-        return super().is_enabled(course_key)
+        return (
+            super().is_enabled(course_key)
+            if course_key
+            else super().is_enabled_without_course_context()
+        )
 
     @contextmanager
     def override(self, active=True, bucket=1):  # pylint: disable=arguments-differ
